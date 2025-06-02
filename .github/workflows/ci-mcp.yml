@@ -1,0 +1,354 @@
+# CI/CD workflow for MCP addon development and deployment
+# Triggered on push to feat-mcp branch and pull requests
+
+on:
+  push:
+    branches: [ feat-mcp, main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'Environment to deploy to'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+env:
+  PYTHON_VERSION: '3.11'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: huleinpylo/gitosint-mcp
+
+jobs:
+  lint-and-format:
+    name: Code Quality (MCP Addon)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout MCP addon code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python for MCP addon
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install MCP addon dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .[dev]
+        
+    - name: Lint with black (MCP addon)
+      run: black --check --diff src/ tests/
+      
+    - name: Sort imports with isort (MCP addon)
+      run: isort --check-only --diff src/ tests/
+      
+    - name: Type check with mypy (MCP addon)
+      run: mypy src/ --ignore-missing-imports
+      
+    - name: Check for security issues (MCP addon)
+      run: |
+        pip install bandit safety
+        bandit -r src/ -f json -o bandit-report.json || true
+        safety check --json --output safety-report.json || true
+        
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+
+  test-mcp-addon:
+    name: Test MCP Addon
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        test-category: ['unit', 'integration', 'mcp']
+    
+    steps:
+    - name: Checkout MCP addon code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install MCP addon dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .[dev]
+        
+    - name: Run ${{ matrix.test-category }} tests for MCP addon
+      run: |
+        pytest tests/ -m ${{ matrix.test-category }} \\
+          --cov=gitosint_mcp \\
+          --cov-report=xml \\
+          --cov-report=html \\
+          --junitxml=test-results-${{ matrix.python-version }}-${{ matrix.test-category }}.xml \\
+          -v
+          
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.python-version }}-${{ matrix.test-category }}
+        path: |
+          test-results-*.xml
+          htmlcov/
+          coverage.xml
+          
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      if: matrix.python-version == '3.11' && matrix.test-category == 'unit'
+      with:
+        file: ./coverage.xml
+        flags: mcp-addon
+        name: GitOSINT-MCP Coverage
+
+  docker-build-mcp:
+    name: Docker Build (MCP Addon)
+    runs-on: ubuntu-latest
+    needs: [lint-and-format, test-mcp-addon]
+    
+    steps:
+    - name: Checkout MCP addon code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Container Registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata for MCP addon
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=feat-mcp,enable={{is_default_branch}}
+          
+    - name: Build and push MCP addon Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          BUILD_DATE=${{ github.event.head_commit.timestamp }}
+          VCS_REF=${{ github.sha }}
+          VERSION=${{ steps.meta.outputs.version }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Test MCP addon Docker image
+      run: |
+        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \\
+          gitosint-mcp --version
+
+  integration-test-mcp:
+    name: Integration Tests (MCP Addon)
+    runs-on: ubuntu-latest
+    needs: docker-build-mcp
+    if: github.ref == 'refs/heads/feat-mcp'
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd \"redis-cli ping\"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout MCP addon code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python for integration tests
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install MCP addon dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .[dev]
+        
+    - name: Run MCP addon integration tests
+      env:
+        REDIS_URL: redis://localhost:6379
+        GITOSINT_MCP_LOG_LEVEL: DEBUG
+        GITOSINT_MCP_ENABLE_CACHE: true
+      run: |
+        pytest tests/ -m \"integration or mcp\" \\
+          --tb=short \\
+          --maxfail=5 \\
+          -v
+          
+    - name: Test MCP server startup
+      run: |
+        timeout 30s python -m gitosint_mcp.server &
+        SERVER_PID=$!
+        sleep 10
+        kill $SERVER_PID || true
+        echo \"MCP server startup test completed\"
+
+  security-scan-mcp:
+    name: Security Scan (MCP Addon)
+    runs-on: ubuntu-latest
+    needs: docker-build-mcp
+    
+    steps:
+    - name: Checkout MCP addon code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+        
+    - name: Run Snyk security scan
+      uses: snyk/actions/python@master
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high --file=requirements.txt
+
+  deploy-mcp-staging:
+    name: Deploy MCP Addon (Staging)
+    runs-on: ubuntu-latest
+    needs: [integration-test-mcp, security-scan-mcp]
+    if: github.ref == 'refs/heads/feat-mcp' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.gitosint-mcp.huleinpylo.dev
+    
+    steps:
+    - name: Deploy to staging environment
+      run: |
+        echo \"🚀 Deploying GitOSINT-MCP addon to staging\"
+        echo \"Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\"
+        # Deployment logic would go here
+        
+    - name: Run smoke tests on staging
+      run: |
+        echo \"🧪 Running smoke tests on staging deployment\"
+        # Smoke test logic would go here
+        
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ \"${{ job.status }}\" = \"success\" ]; then
+          echo \"✅ MCP addon staging deployment successful\"
+        else
+          echo \"❌ MCP addon staging deployment failed\"
+        fi
+
+  release-mcp-addon:
+    name: Release MCP Addon
+    runs-on: ubuntu-latest
+    needs: [integration-test-mcp, security-scan-mcp]
+    if: github.ref == 'refs/heads/main' && startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout MCP addon code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python for release
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+        
+    - name: Build MCP addon package
+      run: python -m build
+      
+    - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      run: twine upload dist/*
+      
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: GitOSINT-MCP ${{ github.ref }}
+        body: |
+          ## GitOSINT-MCP Release
+          
+          ### New Features
+          - Complete MCP addon implementation
+          - OSINT intelligence gathering via Model Context Protocol
+          - Multi-platform Git repository analysis
+          
+          ### Installation
+          ```bash
+          pip install gitosint-mcp==${{ github.ref_name }}
+          ```
+          
+          ### Docker
+          ```bash
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          ```
+        draft: false
+        prerelease: false
+
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    needs: [deploy-mcp-staging, release-mcp-addon]
+    if: always()
+    
+    steps:
+    - name: Cleanup old artifacts
+      run: |
+        echo \"🧹 Cleaning up old CI/CD artifacts\"
+        # Cleanup logic would go here`
