@@ -1,0 +1,56 @@
+# Docker Compose for GitOSINT-MCP Testing
+# Used for integration testing and development
+
+version: '3.8'
+
+services:
+  gitosint-mcp-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: gitosint-mcp-test
+    environment:
+      - LOG_LEVEL=DEBUG
+      - PYTHONPATH=/app/src
+      - GITOSINT_MCP_CONFIG=/app/tests/fixtures/test_config.json
+    volumes:
+      - ./tests:/app/tests
+      - ./src:/app/src
+    working_dir: /app
+    command: >
+      sh -c "pip install -e .[dev] && 
+             python -m pytest tests/ -v --tb=short"
+    networks:
+      - gitosint-test
+
+  # Redis for caching tests (optional)
+  redis-test:
+    image: redis:7-alpine
+    container_name: gitosint-redis-test
+    ports:
+      - "6380:6379"
+    networks:
+      - gitosint-test
+
+  # Mock API server for testing
+  mock-api:
+    image: wiremock/wiremock:latest
+    container_name: gitosint-mock-api
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./tests/fixtures/wiremock:/home/wiremock
+    command: >
+      --global-response-templating 
+      --verbose
+    networks:
+      - gitosint-test
+
+networks:
+  gitosint-test:
+    driver: bridge
+
+volumes:
+  test-data:
+    driver: local
