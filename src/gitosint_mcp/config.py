@@ -14,26 +14,42 @@ from dataclasses import dataclass, asdict
 @dataclass
 class MCPConfig:
     """MCP server configuration"""
-    server_name: str = "gitosint-mcp"
-    server_version: str = "1.0.0"
-    log_level: str = "INFO"
-    rate_limit_delay: float = 1.0
-    max_repositories_per_user: int = 100
-    max_contributors_per_repo: int = 50
-    max_network_depth: int = 3
-    max_social_connections: int = 20
-    timeout_seconds: int = 30
-    user_agent: str = "GitOSINT-MCP/1.0.0 (+https://github.com/Huleinpylo/GitOSINT-mcp)"
+    def __init__(self):
+        self.server_name: str = "gitosint-mcp"
+        self.server_version: str = "1.0.0"
+        self.log_level: str = "INFO"
+        self.rate_limit_delay: float = 1.0
+        self.max_repositories_per_user: int = 100
+        self.max_contributors_per_repo: int = 50
+        self.max_network_depth: int = 3
+        self.max_social_connections: int = 20
+        self.timeout_seconds: int = 30
+        self.user_agent: str = "GitOSINT-MCP/1.0.0 (+https://github.com/Huleinpylo/GitOSINT-mcp)"
+        self.platform: PlatformConfig = PlatformConfig(
+                github_api_url="https://api.github.com",
+                timeout_seconds=30
+            )
 
+    def get_user_agent(self) -> str:
+        # UA personnalisé
+        return self.user_agent
+
+    def is_domain_allowed(self, domain: str) -> bool:
+        # N’autorise que GitHub, GitLab, Bitbucket
+        return domain in {"github.com", "gitlab.com", "bitbucket.org"}
 
 @dataclass
 class PlatformConfig:
     """Platform-specific configuration"""
-    github_api_url: str = "https://api.github.com"
-    gitlab_api_url: str = "https://gitlab.com/api/v4"
-    enable_github: bool = True
-    enable_gitlab: bool = True
-    enable_bitbucket: bool = True
+    def __init__(self, github_api_url: str, timeout_seconds: int, max_contributors_per_repo: int = 100):
+        self.github_api_url = github_api_url
+        self.timeout_seconds = timeout_seconds
+        self.max_contributors_per_repo = max_contributors_per_repo
+        self.github_api_url: str = "https://api.github.com"
+        self.gitlab_api_url: str = "https://gitlab.com/api/v4"
+        self.enable_github: bool = True
+        self.enable_gitlab: bool = True
+        self.enable_bitbucket: bool = True
 
 
 @dataclass
@@ -104,7 +120,10 @@ class GitOSINTConfig:
         """Create default configuration"""
         return cls(
             mcp=MCPConfig(),
-            platforms=PlatformConfig(),
+            platforms=PlatformConfig(
+                github_api_url="https://api.github.com",
+                timeout_seconds=30
+            ),
             security=SecurityConfig()
         )
     

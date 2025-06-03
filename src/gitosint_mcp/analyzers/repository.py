@@ -14,9 +14,7 @@ import logging
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from urllib.parse import urlparse
-import re
-
-from ..config import Config
+from ..config import MCPConfig as Config
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +55,14 @@ class ContributorInfo:
     email: Optional[str] = None
     company: Optional[str] = None
     location: Optional[str] = None
+
+    @property
+    def max_contributors_per_repo(self):
+        raise NotImplementedError
+
+    @max_contributors_per_repo.setter
+    def max_contributors_per_repo(self, value):
+        raise NotImplementedError
 
 class RepositoryAnalyzer:
     """
@@ -236,6 +242,31 @@ class RepositoryAnalyzer:
         api_url = f"{self.config.platform.github_api_url}/repos/{owner}/{repo}"
         
         try:
+            if not self.session:
+                self.session = aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=self.config.timeout_seconds),
+                    headers={'User-Agent': self.config.get_user_agent()}
+                )
+            if not self.session:
+                self.session = aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=self.config.timeout_seconds),
+                    headers={'User-Agent': self.config.get_user_agent()}
+                )
+            if not self.session:
+                self.session = aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=self.config.timeout_seconds),
+                    headers={'User-Agent': self.config.get_user_agent()}
+                )
+            if not self.session:
+                self.session = aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=self.config.timeout_seconds),
+                    headers={'User-Agent': self.config.get_user_agent()}
+                )
+            if not self.session:
+                self.session = aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=self.config.timeout_seconds),
+                    headers={'User-Agent': self.config.get_user_agent()}
+                )
             async with self.session.get(api_url) as response:
                 if response.status == 200:
                     data = await response.json()
@@ -295,6 +326,11 @@ class RepositoryAnalyzer:
         
         try:
             params = {'per_page': min(100, self.config.platform.max_contributors_per_repo)}
+            if not self.session:
+                self.session = aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=self.config.timeout_seconds),
+                    headers={'User-Agent': self.config.get_user_agent()}
+                )
             async with self.session.get(api_url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
@@ -328,6 +364,11 @@ class RepositoryAnalyzer:
         api_url = f"{self.config.platform.github_api_url}/repos/{owner}/{repo}/languages"
         
         try:
+            if not self.session:
+                self.session = aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=self.config.timeout_seconds),
+                    headers={'User-Agent': self.config.get_user_agent()}
+                )
             async with self.session.get(api_url) as response:
                 if response.status == 200:
                     data = await response.json()

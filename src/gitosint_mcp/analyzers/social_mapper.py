@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from collections import defaultdict
 
-from ..config import Config
+from ..config import MCPConfig as Config
 
 logger = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 
 from gitosint_mcp.analyzers.repository import RepositoryAnalyzer, RepositoryInfo, ContributorInfo
-from gitosint_mcp.config import Config
+from gitosint_mcp.config import MCPConfig as Config
 
 @pytest.mark.unit
 class TestRepositoryAnalyzer:
