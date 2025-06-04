@@ -76,9 +76,9 @@ class GitOSINTAnalyzer:
             owner, repo = path_parts[0], path_parts[1]
             
             # Determine platform and API endpoint
-            if 'github.com' in parsed_url.netloc:
+            if parsed_url.netloc == "github.com" or parsed_url.netloc.endswith(".github.com"):
                 return await self._analyze_github_repo(owner, repo)
-            elif 'gitlab.com' in parsed_url.netloc:
+            elif parsed_url.netloc == "gitlab.com" or parsed_url.netloc.endswith(".gitlab.com"):
                 return await self._analyze_gitlab_repo(owner, repo)
             else:
                 raise ValueError(f"Unsupported platform: {parsed_url.netloc}")
