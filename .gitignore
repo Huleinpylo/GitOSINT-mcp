@@ -1,3 +1,5 @@
+# GitOSINT-MCP specific ignores
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -20,14 +22,14 @@ parts/
 sdist/
 var/
 wheels/
-share/python/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
 
@@ -57,6 +59,7 @@ coverage.xml
 *.log
 local_settings.py
 db.sqlite3
+db.sqlite3-journal
 
 # Flask stuff:
 instance/
@@ -82,14 +85,25 @@ ipython_config.py
 .python-version
 
 # pipenv
-.venv/
 Pipfile.lock
 
-# virtualenv
-.venv/
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
 venv/
 ENV/
-env/
+env.bak/
 venv.bak/
 
 # Spyder project settings
@@ -110,63 +124,53 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# pytype static type analyzer
-.pytype/
+# MCP specific files
+*.mcp_cache
+mcp_data/
+mcp_logs/
 
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-# User-specific stuff:
-.idea/
-*.iml
-*.iws
-
-# VSCode
-.vscode/
-
-# Env files
-.env
-.env.*
-
-# Environment variables
-.env
-.env.*
-
-# Logs
+# GitOSINT-MCP specific
+data/
 logs/
-*.log
+config.json
+.secrets
 
-# Runtime data
-*.pyc
-*.pyo
+# IDE specific
+.vscode/
+.idea/
 *.swp
 *.swo
-*.a
-*.pyprof
-*.prof
+*~
 
-# Directories
-__pycache__/
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# macOS
+# OS specific
 .DS_Store
-
-# Windows
-Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 ehthumbs.db
+Thumbs.db
 
-# Folder config file
-Desktop.ini
+# Docker
+.dockerignore
+docker-compose.override.yml
 
-# Recording
-.vscode/
+# Git
+*.orig
 
-# Dependency directories
-node_modules/
-jspm_packages/
+# Temporary files
+*.tmp
+*.temp
+
+# Local development
+local_config.json
+test_data/
+.local/
+
+# Security
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.yaml
+credentials.json
