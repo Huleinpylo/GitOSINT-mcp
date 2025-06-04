@@ -346,6 +346,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy-mcp-staging, release-mcp-addon]
     if: always()
+    permissions:
+      contents: none
+      issues: none
+      pull-requests: none
+      deployments: none
+      packages: none
+      statuses: none
     
     steps:
     - name: Cleanup old artifacts
