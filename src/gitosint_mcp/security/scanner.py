@@ -20,7 +20,9 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from ..config import Config
+from ..config import config as Config
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +56,7 @@ class SecurityScanner:
     - Privacy-respecting public data only
     """
     
-    def __init__(self, config: Config):
+    def __init__(self, config: Config): # type: ignore
         """Initialize security scanner for MCP addon."""
         self.config = config
         self.session: Optional[aiohttp.ClientSession] = None
@@ -237,7 +239,7 @@ class SecurityScanner:
             api_url = f"{self.config.platform.github_api_url}/repos/{owner}/{repo}/contents/{file_path}"
             
             try:
-                async with self.session.get(api_url) as response:
+                async with self.session.get(api_url) as response: # type: ignore
                     if response.status == 200:
                         data = await response.json()
                         if data.get('type') == 'file' and 'content' in data:
