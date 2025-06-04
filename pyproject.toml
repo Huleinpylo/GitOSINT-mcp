@@ -123,7 +123,8 @@ testpaths = ["tests"]
 markers = [
     "slow: marks tests as slow (deselect with -m not slow)",
     "integration: marks tests as integration tests",
-    "mcp: marks tests as MCP-specific functionality"
+    "mcp: marks tests as MCP-specific functionality",
+    "unit: marks tests as unit tests"
 ]
 
 [tool.coverage.run]
@@ -146,3 +147,8 @@ exclude_also = [
     'class .*\bProtocol\):',
     '@(abc\.)?abstractmethod',
 ]
+[mypy]
+disable_error_code = annotation-unchecked
+@pytest.fixture
+def analyzer(test_config):
+    return GitOSINTAnalyzer(test_config)

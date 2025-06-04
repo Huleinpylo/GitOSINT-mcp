@@ -11,7 +11,8 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from gitosint_mcp.analyzers.repository import RepositoryAnalyzer, RepositoryInfo, ContributorInfo
 from gitosint_mcp.config import MCPConfig as Config
 
-@pytest.mark.unit
+pytestmark = pytest.mark.unit
+
 class TestRepositoryAnalyzer:
     """Test repository analyzer for MCP addon."""
     

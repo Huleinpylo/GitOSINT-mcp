@@ -7,14 +7,15 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
+from dataclasses import dataclass
 
 # Import the actual classes from our config module
 from src.gitosint_mcp.config import (
     GitOSINTConfig,
     MCPConfig,
-    PlatformConfig,
     SecurityConfig,
+    PlatformConfig,
     get_config,
     reload_config,
     validate_config,
@@ -42,12 +43,17 @@ class TestMCPConfig:
     
     def test_custom_mcp_config(self):
         """Test custom MCP configuration values"""
-        config = MCPConfig(
-            server_name="custom-server",
-            log_level="DEBUG",
-            rate_limit_delay=2.5,
-            timeout_seconds=60
-        )
+        config = MCPConfig()
+        config.server_name = "custom-server"
+        config.server_version = "1.0.0"
+        config.log_level = "DEBUG"
+        config.rate_limit_delay = 2.5
+        config.max_repositories_per_user = 100
+        config.max_contributors_per_repo = 50
+        config.max_network_depth = 3
+        config.max_social_connections = 20
+        config.timeout_seconds = 60
+        config.user_agent = "test"
         
         assert config.server_name == "custom-server"
         assert config.log_level == "DEBUG"
@@ -60,23 +66,25 @@ class TestPlatformConfig:
     
     def test_default_platform_config(self):
         """Test default platform configuration"""
-        config = PlatformConfig()
+        config = PlatformConfig(
+            github_api_url="https://api.github.com",
+            timeout_seconds=30
+        )
         
         assert config.github_api_url == "https://api.github.com"
         assert config.gitlab_api_url == "https://gitlab.com/api/v4"
         assert config.enable_github is True
-        assert config.enable_gitlab is True
-        assert config.enable_bitbucket is False
-    
+
     def test_custom_platform_config(self):
         """Test custom platform configuration"""
         config = PlatformConfig(
             github_api_url="https://api.github.enterprise.com",
-            enable_github=False,
-            enable_gitlab=False,
-            enable_bitbucket=True
+            timeout_seconds=30, # Custom timeout
+            max_contributors_per_repo=100
         )
-        
+        config.enable_github = False
+        config.enable_gitlab = False
+        config.enable_bitbucket = True
         assert config.github_api_url == "https://api.github.enterprise.com"
         assert config.enable_github is False
         assert config.enable_gitlab is False

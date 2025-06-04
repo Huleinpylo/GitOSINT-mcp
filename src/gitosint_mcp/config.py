@@ -45,7 +45,8 @@ class PlatformConfig:
         self.github_api_url = github_api_url
         self.timeout_seconds = timeout_seconds
         self.max_contributors_per_repo = max_contributors_per_repo
-        self.github_api_url: str = "https://api.github.com"
+        self.bitbucket_api_url: str = "https://api.bitbucket.org/2.0"
+        
         self.gitlab_api_url: str = "https://gitlab.com/api/v4"
         self.enable_github: bool = True
         self.enable_gitlab: bool = True
