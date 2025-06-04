@@ -23,6 +23,7 @@ from src.gitosint_mcp.config import (
 )
 
 
+
 class TestMCPConfig:
     """Test MCP configuration dataclass"""
     

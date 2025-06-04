@@ -115,7 +115,7 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
-
+disable_error_code = ["annotation-unchecked"]
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --strict-markers --strict-config"
@@ -147,8 +147,3 @@ exclude_also = [
     'class .*\bProtocol\):',
     '@(abc\.)?abstractmethod',
 ]
-[mypy]
-disable_error_code = annotation-unchecked
-@pytest.fixture
-def analyzer(test_config):
-    return GitOSINTAnalyzer(test_config)

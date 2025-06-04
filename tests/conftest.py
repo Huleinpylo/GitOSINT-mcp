@@ -311,19 +311,26 @@ def mock_config():
     """Mock configuration for testing"""
     from src.gitosint_mcp.config import GitOSINTConfig, MCPConfig, PlatformConfig, SecurityConfig
     
+    mcp_config = MCPConfig()
+    mcp_config.server_name = "test-gitosint-mcp"
+    mcp_config.server_version = "1.0.0-test"
+    mcp_config.log_level = "DEBUG"
+    mcp_config.rate_limit_delay = 0.1  # Faster for testing
+    mcp_config.timeout_seconds = 10  # Shorter for testing
+    
+    platform_config = PlatformConfig(
+        github_api_url="https://api.github.com",
+        timeout_seconds=10
+    )
+    platform_config.enable_github = True
+    platform_config.enable_gitlab = True
+    platform_config.enable_bitbucket = False
+    
+    mcp_config.platform = platform_config
+    
     return GitOSINTConfig(
-        mcp=MCPConfig(
-            server_name="test-gitosint-mcp",
-            server_version="1.0.0-test",
-            log_level="DEBUG",
-            rate_limit_delay=0.1,  # Faster for testing
-            timeout_seconds=10  # Shorter for testing
-        ),
-        platforms=PlatformConfig(
-            enable_github=True,
-            enable_gitlab=True,
-            enable_bitbucket=False
-        ),
+        mcp=mcp_config,
+        platforms=platform_config,
         security=SecurityConfig(
             respect_rate_limits=False,  # Disabled for testing
             log_requests=True,
