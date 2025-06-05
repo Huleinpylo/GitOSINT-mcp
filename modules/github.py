@@ -20,7 +20,7 @@ def github_find(user, verbose):
     # Extract user information
     user_info = {}
     user_info['username'] = user
-    user_info['display_name'] = user_profile.find('span', class_='p-name').text.strip() if user_profile.find('span', class_='p-name') else 'No diplay name'
+    user_info['display_name'] = user_profile.find('span', class_='p-name').text.strip() if user_profile.find('span', class_='p-name') else 'No display name'
     user_info['bio'] = user_profile.find('div', class_='p-note').text.strip() if user_profile.find('div', class_='p-note') else 'No bio'
     user_info['location'] = user_profile.find('span', class_='p-label').text.strip() if user_profile.find('span', class_='p-label') else 'No location'
 
