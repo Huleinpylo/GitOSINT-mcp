@@ -7,6 +7,7 @@ import asyncio
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 from unittest.mock import AsyncMock, Mock
 
 # Add src directory to Python path for imports
@@ -475,9 +476,10 @@ def assert_valid_github_url(url):
 
 def assert_valid_gitlab_url(url):
     """Assert that a string is a valid GitLab URL"""
+    from urllib.parse import urlparse
     assert_valid_url(url)
-    assert "gitlab.com" in url
-
+    hostname = urlparse(url).hostname
+    assert hostname and (hostname == "gitlab.com" or hostname.endswith(".gitlab.com"))
 
 # Test data generators
 def generate_mock_repository_data(name="test/repo", **kwargs):
