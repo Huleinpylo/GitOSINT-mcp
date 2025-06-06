@@ -471,7 +471,9 @@ def assert_valid_url(url):
 def assert_valid_github_url(url):
     """Assert that a string is a valid GitHub URL"""
     assert_valid_url(url)
-    assert "github.com" in url
+    from urllib.parse import urlparse
+    hostname = urlparse(url).hostname
+    assert hostname and (hostname == "github.com" or hostname.endswith(".github.com"))
 
 
 def assert_valid_gitlab_url(url):
